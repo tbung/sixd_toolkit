@@ -8,6 +8,8 @@ import math
 import numpy as np
 from scipy import spatial
 from . import renderer, misc, visibility
+from data.generate import render_depth
+np.set_printoptions(threshold=np.inf)
 
 def vsd(R_est, t_est, R_gt, t_gt, model, depth_test, K, delta, tau,
         cost_type='tlinear'):
@@ -29,22 +31,30 @@ def vsd(R_est, t_est, R_gt, t_gt, model, depth_test, K, delta, tau,
     :return: Error of pose_est w.r.t. pose_gt.
     """
 
-    im_size = (depth_test.shape[1], depth_test.shape[0])
+    # im_size = (depth_test.shape[1], depth_test.shape[0])
+    im_size = 128
 
     # Render depth images of the model in the estimated and the ground truth pose
-    depth_est = renderer.render(model, im_size, K, R_est, t_est, clip_near=100,
-                                clip_far=10000, mode='depth')
+    # depth_est = renderer.render(model, im_size, K, R_est, t_est, clip_near=0.1,
+    #                             clip_far=100, mode='depth')
+    depth_est = render_depth("cat", im_size, R_est, t_est)
 
-    depth_gt = renderer.render(model, im_size, K, R_gt, t_gt, clip_near=100,
-                               clip_far=10000, mode='depth')
+    # depth_gt = renderer.render(model, im_size, K, R_gt, t_gt, clip_near=100,
+    #                            clip_far=10000, mode='depth')
+    depth_gt = render_depth("cat", im_size, R_gt, t_gt)
 
     # Convert depth images to distance images
     dist_test = misc.depth_im_to_dist_im(depth_test, K)
     dist_gt = misc.depth_im_to_dist_im(depth_gt, K)
     dist_est = misc.depth_im_to_dist_im(depth_est, K)
 
+    # print(dist_test.mean())
+    # print(dist_gt.mean())
+
     # Visibility mask of the model in the ground truth pose
     visib_gt = visibility.estimate_visib_mask_gt(dist_test, dist_gt, delta)
+
+    # print(np.any(visib_gt))
 
     # Visibility mask of the model in the estimated pose
     visib_est = visibility.estimate_visib_mask_est(dist_test, dist_est, visib_gt, delta)
