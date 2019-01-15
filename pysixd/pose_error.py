@@ -12,7 +12,7 @@ from data.generate import render_depth
 np.set_printoptions(threshold=np.inf)
 
 def vsd(R_est, t_est, R_gt, t_gt, model, depth_test, K, delta, tau,
-        cost_type='tlinear'):
+        cost_type='tlinear', shape="cat"):
     """
     Visible Surface Discrepancy.
 
@@ -37,19 +37,26 @@ def vsd(R_est, t_est, R_gt, t_gt, model, depth_test, K, delta, tau,
     # Render depth images of the model in the estimated and the ground truth pose
     # depth_est = renderer.render(model, im_size, K, R_est, t_est, clip_near=0.1,
     #                             clip_far=100, mode='depth')
-    depth_est = render_depth("cat", im_size, R_est, t_est)
+    depth_est = render_depth(shape, im_size, R_est, t_est)
 
     # depth_gt = renderer.render(model, im_size, K, R_gt, t_gt, clip_near=100,
     #                            clip_far=10000, mode='depth')
-    depth_gt = render_depth("cat", im_size, R_gt, t_gt)
+    depth_gt = render_depth(shape, im_size, R_gt, t_gt)
+
+    # print(np.abs(depth_est - depth_gt).max())
+    # print(np.abs(depth_est).max())
+    # print(np.abs(depth_gt).max())
 
     # Convert depth images to distance images
     dist_test = misc.depth_im_to_dist_im(depth_test, K)
     dist_gt = misc.depth_im_to_dist_im(depth_gt, K)
     dist_est = misc.depth_im_to_dist_im(depth_est, K)
+    # print(" ")
+    # print(dist_est)
+    # print(dist_test.max())
+    # print(dist_gt[depth_gt != 0].min())
+    # print(dist_gt[depth_gt != 0].max())
 
-    # print(dist_test.mean())
-    # print(dist_gt.mean())
 
     # Visibility mask of the model in the ground truth pose
     visib_gt = visibility.estimate_visib_mask_gt(dist_test, dist_gt, delta)
@@ -65,6 +72,10 @@ def vsd(R_est, t_est, R_gt, t_gt, model, depth_test, K, delta, tau,
 
     # Pixel-wise matching cost
     costs = np.abs(dist_gt[visib_inter] - dist_est[visib_inter])
+    # print()
+    # print(costs.min())
+    # print(costs.max())
+    # print(tau)
     if cost_type == 'step':
         costs = costs >= tau
     elif cost_type == 'tlinear': # Truncated linear
